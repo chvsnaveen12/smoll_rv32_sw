@@ -1,0 +1,8 @@
+dts:
+    make
+
+opensbi:
+    make CROSS_COMPILE=riscv64-linux-gnu- PLATFORM=generic PLATFORM_RISCV_XLEN=32 PLATFORM_RISCV_ISA=rv32ima_zicsr_zifencei PLATFORM_RISCV_ABI=ilp32
+
+Linux:
+    make ARCH=riscv CROSS_COMPILE=riscv32-unknown-linux-gnu- -j$(nproc)

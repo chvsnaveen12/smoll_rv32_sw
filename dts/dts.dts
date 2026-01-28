@@ -1,0 +1,76 @@
+/dts-v1/;
+/ {
+    #address-cells = <1>;
+    #size-cells = <1>;
+    compatible = "riscv-virtio";
+    model = "riscv-virtio,qemu";
+
+    chosen {
+        bootargs = "earlycon=sbi ignore_loglevel console=ttyS0";
+        stdout-path = "/soc/serial@10000000";
+//        linux,initrd-start = <0x87000000>;
+//        linux,initrd-end = <0x87ffffff>;
+    };
+
+    cpus {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        timebase-frequency = <10000000>;
+
+        cpu0: cpu@0 {
+            device_type = "cpu";
+            reg = <0>;
+            compatible = "riscv";
+            riscv,isa = "rv32imasu";
+            mmu-type = "riscv,sv32";
+            clock-frequency = <10000000>;
+            cpu0_intc: interrupt-controller {
+                #address-cells = <1>;
+                #interrupt-cells = <1>;
+                compatible = "riscv,cpu-intc";
+                interrupt-controller;
+            };
+        };
+    };
+
+    /* Make sure these adresses and sizes match the actual
+    configuration in src/core/riscv_config.h */
+    sram: memory@80000000 {
+        device_type = "memory";
+        reg = <0x80000000 0x8000000>;
+    };
+ 
+    soc {
+        #address-cells = <1>;
+        #size-cells = <1>;
+        compatible = "simple-bus";
+        ranges;
+
+        clint0: clint@20000000 {
+            compatible = "riscv,clint0";
+            reg = <0x20000000 0xc0000>;
+            interrupts-extended =  <&cpu0_intc 3 &cpu0_intc 7>;
+        };
+
+        plic0: interrupt-controller@30000000 {
+            #address-cells = <1>;
+            #interrupt-cells = <1>;
+            interrupt-controller;
+            compatible = "riscv,plic0";
+            reg = <0x30000000 0x4000000>;
+            interrupts-extended = <&cpu0_intc 11>, <&cpu0_intc 9>;
+            riscv,ndev = <31>;
+            riscv,max-priority = <1>;
+        };
+
+        uart0: serial@10000000 {
+            interrupts = <4>;
+            interrupt-parent = <&plic0>;
+            reg = <0x10000000 0x10>;
+            compatible = "smolluart";
+            clock-frequency = <1843200>;
+            // compatible = "ns16550a";
+        };
+    };
+    
+};

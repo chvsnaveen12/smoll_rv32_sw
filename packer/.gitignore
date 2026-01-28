@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Output files
+*.bin
+*.hex
+*.packed
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*~

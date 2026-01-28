@@ -1,0 +1,10 @@
+#!/bin/sh
+/bin/mount -t proc proc /proc
+/bin/mount -t sysfs sysfs /sys
+/bin/mount -t devtmpfs devtmpfs /dev
+
+echo "--------------------------------"
+echo "  Booting Custom RISC-V Kernel  "
+echo "--------------------------------"
+
+exec /bin/setsid /bin/cttyhack /bin/sh

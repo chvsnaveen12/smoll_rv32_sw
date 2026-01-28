@@ -1,0 +1,21 @@
+MSTATUS
+MSTATUSH
+MISA
+MEDELEG
+MIDELEG
+MIE
+MTVEC
+MCOUTNEREN
+MSCRATCH
+MEPC
+MCAUSE
+MTVAL
+MIP
+MTINST
+MCYCLE
+MINSTRET
+
+Understand the behaviour of sie sip mie mip
+And csr instructions
+Implement sext in the instructions instead of memory
+Add MSTATUSH

@@ -1,0 +1,17 @@
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.orig
+
+# Debug/core dumps
+core
+core.*

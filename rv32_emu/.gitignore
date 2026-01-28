@@ -1,0 +1,23 @@
+# Compiled binary
+emu
+
+# Test binaries (not part of emulator source)
+*.bin
+*.elf
+
+# Logs
+logs.txt
+*.log
+
+# Signature files (test outputs)
+*.signature
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Debug files
+core
+core.*

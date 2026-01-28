@@ -1,0 +1,10 @@
+# Compiled device tree blob
+*.dtb
+
+# Preprocessed device tree
+*.dts.tmp
+*.dtb.tmp
+
+# Editor/IDE
+*.swp
+*~
