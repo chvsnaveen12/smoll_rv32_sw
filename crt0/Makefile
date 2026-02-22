@@ -14,6 +14,7 @@ LDFLAGS = -T link.ld -nostdlib
 
 # Files
 TARGET = firmware
+# OBJS = crt0_test.o
 OBJS = crt0.o main.o
 
 # Default target

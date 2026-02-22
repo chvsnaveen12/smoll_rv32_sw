@@ -83,7 +83,7 @@ typedef struct csr{
 } csr_td;
 
 // Forward declaration for mmu_td
-#include "mmu.h"
+// #include "mmu.h"
 
 typedef struct core{
     // Core registers
@@ -126,7 +126,7 @@ typedef struct core{
     csr_td csr;
 
     // MMU
-    mmu_td mmu;
+    // mmu_td mmu;
 
     // Debug
     uint64_t cycle;
@@ -163,10 +163,10 @@ typedef struct uart{
     uint8_t thre_int;
 } simple_uart_td;
 
-#define PLIC_PENDING_REGS 8
-#define PLIC_PRIO_REGS 256
-#define PLIC_ENABLE_REGS 8
-#define PLIC_CLAIMED_REGS 8
+#define PLIC_PENDING_REGS 1
+#define PLIC_PRIO_REGS 32
+#define PLIC_ENABLE_REGS 1
+#define PLIC_CLAIMED_REGS 1
 
 typedef struct plic{
     uint32_t pending[PLIC_PENDING_REGS];

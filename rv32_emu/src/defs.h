@@ -31,12 +31,13 @@ void clint_update(clint_td *clint, bool* msi, bool* mti);
 bool plic_bus_access_func(plic_td *plic, uint32_t addr, bus_access access, uint32_t* val, uint8_t len);
 void plic_update(plic_td *plic, bool* mei, bool* sei);
 void plic_update_pending(plic_td *plic, uint32_t id, bool val);
+void plic_init(plic_td *plic);
 
-void mmu_init(mmu_td *mmu);
-void mmu_update_satp(mmu_td *mmu, uint32_t satp);
-void mmu_flush_tlb(mmu_td *mmu);
-bool mmu_translate(core_td *core, uint32_t vaddr, int access, uint32_t *paddr);
-bool mmu_access(core_td *core, uint32_t addr, int access, uint32_t *val, uint8_t len);
+// void mmu_init(mmu_td *mmu);
+// void mmu_update_satp(mmu_td *mmu, uint32_t satp);
+// void mmu_flush_tlb(mmu_td *mmu);
+// bool mmu_translate(core_td *core, uint32_t vaddr, int access, uint32_t *paddr);
+// bool mmu_access(core_td *core, uint32_t addr, int access, uint32_t *val, uint8_t len);
 
 void helper_write_from_file(char *fname, uint8_t *mem_ptr, uint64_t size);
 uint64_t helper_get_file_size(char *fname);

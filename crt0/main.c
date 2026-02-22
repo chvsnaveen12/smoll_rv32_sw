@@ -25,7 +25,7 @@
 // =========================================================
 // SPI Registers
 // =========================================================
-#define SPI_BASE      0x20000000 // Adjust to your actual MMIO base
+#define SPI_BASE      0x50000000 // Adjust to your actual MMIO base
 #define SPI_TX_DATA   ((volatile uint32_t*)(SPI_BASE + 0x00))
 #define SPI_RX_DATA   ((volatile uint32_t*)(SPI_BASE + 0x04))
 #define SPI_CS_CTRL   ((volatile uint32_t*)(SPI_BASE + 0x08))
@@ -155,7 +155,7 @@ int sd_read_blocks(uint32_t start_block, uint32_t num_blocks, uint8_t *dst) {
 }
 
 int main() {
-    uart_puts("\n\rRISC-V Bootloader v2.0\n\r");
+    uart_puts("\n\rSMOLL Bootloader\n\r");
     *SPI_CLK_DIV = 200;
 
     // 1. Power-on sequence
@@ -196,7 +196,7 @@ int main() {
     }
 
     // 3. Switch to High Speed
-    *SPI_CLK_DIV = 4;
+    *SPI_CLK_DIV = 1;
     uart_puts("SD Init Done. Reading Header...\n\r");
 
     // Read Block 0 (Header)
@@ -247,8 +247,12 @@ int main() {
         entry_offset += 12;
     }
 
+    while (UART_RX_AVAIL) (void)UART_RX_DATA; // flush stale RX
+    uart_puts("Press any key to boot...\n\r");
+    while (!UART_RX_AVAIL);
+    (void)UART_RX_DATA;
     uart_puts("Booting...\n\r");
-    
+
     // Calculate FDT Address: RAM Base (0x80000000) + 128MB (0x08000000) - 32MB (0x02000000)
     // = 0x86000000
     uint32_t fdt_addr = 0x86000000;

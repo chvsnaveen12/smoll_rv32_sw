@@ -6,3 +6,5 @@ opensbi:
 
 Linux:
     make ARCH=riscv CROSS_COMPILE=riscv32-unknown-linux-gnu- -j$(nproc)
+
+diff -y <(sed 's/\[EMU\] //' emu.log) <(sed 's/\[RTL\] //' rtl.log)
