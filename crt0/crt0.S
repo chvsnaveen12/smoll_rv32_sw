@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Naveen Chavali
+
 # Simple RISC-V crt0
 
 .section .text.init

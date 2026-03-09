@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Naveen Chavali
+
 # Minimal UART test - no stack, no C, no GP
 # Just bang the UART directly from assembly
 
