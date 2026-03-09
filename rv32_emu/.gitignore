@@ -18,6 +18,6 @@ logs.txt
 *.swp
 *~
 
-# Debug files
+# Debug files (core dumps, not source)
 core
-core.*
+core.[0-9]*

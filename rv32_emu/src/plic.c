@@ -31,64 +31,34 @@
 
 void plic_update_pending(plic_td *plic, uint32_t id, bool val) {
     uint32_t reg = id / 32;
-    uint32_t bit = id % 32;
-
-    uint32_t temp = plic->pending[reg];
-    temp &= ~(1 << bit);
-    temp |= ((uint32_t)val << bit) & ~(plic->claimed[reg] & (1 << bit));
-    plic->pending[reg] = temp;
+    uint32_t mask = 1u << (id % 32);
+    // skip if claimed
+    if (val && !(plic->claimed[reg] & mask))
+        plic->pending[reg] |= mask;
+    else
+        plic->pending[reg] &= ~mask;
 }
 
 void plic_init(plic_td *plic) {
-    for (uint32_t i = 0; i < PLIC_PRIO_REGS; i++)
-        plic->priority[i] = 1;
-
-    plic->threshold0 = 0;
-    plic->threshold1 = 0;
+    (void)plic;
 }
 
+// all priorities are 1 and threshold is 0 so first enabled and pending wins
 void plic_update(plic_td *plic, bool *mei, bool *sei) {
-    uint32_t irq_id0 = 0;
-    uint32_t irq_prio0 = 0;
-    uint32_t irq_id1 = 0;
-    uint32_t irq_prio1 = 0;
+    uint32_t irq0 = 0, irq1 = 0;
 
-    uint32_t i = 0;
-    for (uint32_t j = 0; j < (sizeof(plic->enable0[0]) * 8); j++) {
-        if ((plic->enable0[i] & (1 << j)) && (plic->pending[i] & (1 << j)) &&
-            (plic->priority[(i * 32) + j] >= plic->threshold0)) {
-            if (plic->priority[(i * 32) + j] > irq_prio0) {
-                irq_prio0 = plic->priority[(i * 32) + j];
-                irq_id0 = (i * 32) + j;
-            }
-        }
+    for (uint32_t j = 1; j < 32; j++) {
+        uint32_t bit = 1u << j;
+        if (!irq0 && (plic->enable0[0] & bit) && (plic->pending[0] & bit))
+            irq0 = j;
+        if (!irq1 && (plic->enable1[0] & bit) && (plic->pending[0] & bit))
+            irq1 = j;
     }
 
-    for (uint32_t j = 0; j < (sizeof(plic->enable1[0]) * 8); j++) {
-        if ((plic->enable1[i] & (1 << j)) && (plic->pending[i] & (1 << j)) &&
-            (plic->priority[(i * 32) + j] >= plic->threshold1)) {
-            if (plic->priority[(i * 32) + j] > irq_prio1) {
-                irq_prio1 = plic->priority[(i * 32) + j];
-                irq_id1 = (i * 32) + j;
-            }
-        }
-    }
-
-    if (irq_prio0 > 0) {
-        plic->claim_complete0 = irq_id0;
-        *mei = true;
-    } else {
-        plic->claim_complete0 = 0;
-        *mei = false;
-    }
-
-    if (irq_prio1 > 0) {
-        plic->claim_complete1 = irq_id1;
-        *sei = true;
-    } else {
-        plic->claim_complete1 = 0;
-        *sei = false;
-    }
+    plic->claim_complete0 = irq0;
+    *mei = irq0 > 0;
+    plic->claim_complete1 = irq1;
+    *sei = irq1 > 0;
 }
 
 bool plic_bus_access_func(plic_td *plic, uint32_t addr, bus_access access, uint32_t *val,
@@ -103,7 +73,7 @@ bool plic_bus_access_func(plic_td *plic, uint32_t addr, bus_access access, uint3
 
     if (access == bus_write) {
         if (PRIO_OFFSET <= addr && addr < PRIO_OFFSET + PRIO_SIZE)
-            plic->priority[addr - PRIO_OFFSET] = 1;
+            ; // fixed at 1
 
         else if (PENDING_OFFSET <= addr && addr < PENDING_OFFSET + PENDING_SIZE)
             plic->pending[addr - PENDING_OFFSET] = *val;
@@ -114,24 +84,24 @@ bool plic_bus_access_func(plic_td *plic, uint32_t addr, bus_access access, uint3
             plic->enable1[addr - ENABLE1_OFFSET] = *val;
 
         else if (PRIO0_THRESH_OFFSET <= addr && addr < PRIO0_THRESH_OFFSET + PRIO0_THRESH_SIZE)
-            plic->threshold0 = 0;
+            ; // fixed at 0
         else if (PRIO1_THRESH_OFFSET <= addr && addr < PRIO1_THRESH_OFFSET + PRIO1_THRESH_SIZE)
-            plic->threshold1 = 0;
+            ; // fixed at 0
 
         else if (CLAIM0_COMPLETE_OFFSET <= addr &&
                  addr < CLAIM0_COMPLETE_OFFSET + CLAIM0_COMPLETE_SIZE) {
             uint32_t reg = *val / 32;
             uint32_t bit = *val % 32;
-            plic->claimed[reg] &= ~(1 << bit);
+            plic->claimed[reg] &= ~(1u << bit);
         } else if (CLAIM1_COMPLETE_OFFSET <= addr &&
                    addr < CLAIM1_COMPLETE_OFFSET + CLAIM1_COMPLETE_SIZE) {
             uint32_t reg = *val / 32;
             uint32_t bit = *val % 32;
-            plic->claimed[reg] &= ~(1 << bit);
+            plic->claimed[reg] &= ~(1u << bit);
         }
     } else {
         if (PRIO_OFFSET <= addr && addr < PRIO_OFFSET + PRIO_SIZE)
-            *val = plic->priority[addr - PRIO_OFFSET];
+            *val = 1; // fixed at 1
 
         else if (PENDING_OFFSET <= addr && addr < PENDING_OFFSET + PENDING_SIZE)
             *val = plic->pending[addr - PENDING_OFFSET];
@@ -142,22 +112,22 @@ bool plic_bus_access_func(plic_td *plic, uint32_t addr, bus_access access, uint3
             *val = plic->enable1[addr - ENABLE1_OFFSET];
 
         else if (PRIO0_THRESH_OFFSET <= addr && addr < PRIO0_THRESH_OFFSET + PRIO0_THRESH_SIZE)
-            *val = plic->threshold0;
+            *val = 0; // fixed at 0
         else if (PRIO1_THRESH_OFFSET <= addr && addr < PRIO1_THRESH_OFFSET + PRIO1_THRESH_SIZE)
-            *val = plic->threshold1;
+            *val = 0; // fixed at 0
 
         else if (CLAIM0_COMPLETE_OFFSET <= addr &&
                  addr < CLAIM0_COMPLETE_OFFSET + CLAIM0_COMPLETE_SIZE) {
             *val = plic->claim_complete0;
             uint32_t reg = *val / 32;
             uint32_t bit = *val % 32;
-            plic->claimed[reg] |= 1 << bit;
+            plic->claimed[reg] |= 1u << bit;
         } else if (CLAIM1_COMPLETE_OFFSET <= addr &&
                    addr < CLAIM1_COMPLETE_OFFSET + CLAIM1_COMPLETE_SIZE) {
             *val = plic->claim_complete1;
             uint32_t reg = *val / 32;
             uint32_t bit = *val % 32;
-            plic->claimed[reg] |= 1 << bit;
+            plic->claimed[reg] |= 1u << bit;
         }
     }
     return true;

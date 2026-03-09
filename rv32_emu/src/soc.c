@@ -5,14 +5,11 @@
 #include "defs.h"
 #include "memory.h"
 #include "types.h"
-#include <fcntl.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
-#include <unistd.h>
 
 bool soc_bus_access_func(soc_td *soc, uint32_t addr, bus_access access, uint32_t *val,
                          uint8_t len) {
@@ -72,7 +69,6 @@ bool soc_init(soc_td *soc, char *sbi_file, char *linux_file, char *disk_img, cha
 
     memset(soc, 0, sizeof(soc_td));
 
-    // ROM init
     soc->rom = (uint8_t *)malloc(ROM_SIZE * sizeof(uint8_t));
     if (soc->rom == NULL) {
         printf("malloc for ROM failed\n");
@@ -80,7 +76,6 @@ bool soc_init(soc_td *soc, char *sbi_file, char *linux_file, char *disk_img, cha
     }
     memcpy(soc->rom, boot_rom, sizeof(boot_rom));
 
-    // RAM init
     soc->ram = (uint8_t *)malloc(RAM_SIZE * sizeof(uint8_t));
     if (soc->ram == NULL) {
         printf("malloc for RAM failed\n");
@@ -93,14 +88,15 @@ bool soc_init(soc_td *soc, char *sbi_file, char *linux_file, char *disk_img, cha
                            RAM_SIZE - (FDT_ADDR - RAM_BASE));
 
     simple_uart_init(&soc->uart);
-    soc->clint.mtime = 0xffffffffffffffffUL; // Prevent timer interrupts until mtimecmp is set
+    soc->clint.mtime = 0xffffffffffffffffUL; // starts at max so no timer fires until sw sets mtimecmp
     core_init(&soc->core, soc);
     plic_init(&soc->plic);
     return true;
 }
 
-// This dumps in the same format as RTL so doing a diff is straightforward
+// same format as rtl testbench, used for diff debugging
 static void emu_core_dump(soc_td *soc, uint64_t fetch_cnt) {
+    fprintf(stderr, "=== fetch %lu ===\n", fetch_cnt);
     fprintf(stderr, "Inst: 0x%08x\n", soc->core.inst);
     fprintf(stderr, "PC: 0x%08x\n\n", soc->core.next_pc);
     for (int i = 0; i < 16; i++)
@@ -135,18 +131,17 @@ static void emu_core_dump(soc_td *soc, uint64_t fetch_cnt) {
     fflush(stderr);
 }
 
-uint64_t count = 0;
 static uint64_t emu_fetch_count = 0;
+
 void soc_run(soc_td *soc) {
     bool mei = 0, sei = 0, msi = 0, mti = 0;
 
     emu_fetch_count++;
+    // Uncomment to diff against RTL at a specific fetch count
+    // if (emu_fetch_count >= 428482000)
+    //     emu_core_dump(soc, emu_fetch_count);
 
-    // Dump BEFORE fetch so state matches RTL's FETCH->non-FETCH snapshot:
-    // next_pc = address about to be fetched (matches RTL pc_q)
-    // inst = previous instruction (matches RTL fe_instr_q)
-    // regs = after previous instruction (matches RTL regs)
-
+    // dump before fetch so next_pc matches rtl's pc_q at the fetch->non-fetch transition
     if (core_fetch(&soc->core)) {
         core_decode(&soc->core);
         core_execute(&soc->core);

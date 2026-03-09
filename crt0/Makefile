@@ -1,4 +1,7 @@
-# Toolchain
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Naveen Chavali
+
+
 CROSS = riscv64-unknown-elf-
 CC = $(CROSS)gcc
 AS = $(CROSS)as

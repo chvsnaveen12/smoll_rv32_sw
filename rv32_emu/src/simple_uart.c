@@ -9,11 +9,8 @@
 #include <termios.h>
 #include <unistd.h>
 
-// Internal state for UART
 static struct termios term_config;
 static pthread_mutex_t fifo_lock;
-static simple_uart_td *global_uart_ptr = NULL;
-
 static bool print_type = false;
 
 uint8_t simple_uart_rx_fifo_pop(simple_uart_td *uart) {
@@ -24,18 +21,17 @@ uint8_t simple_uart_rx_fifo_pop(simple_uart_td *uart) {
 }
 
 void simple_uart_rx_fifo_push(simple_uart_td *uart, uint8_t val) {
-    if (uart->fifo_write_ptr - uart->fifo_read_ptr < 16)
-        uart->fifo_buf[uart->fifo_write_ptr++ % 16] = val;
-    else {
-        uart->fifo_buf[uart->fifo_write_ptr++ % 16] = val;
+    // drop oldest on full
+    if (uart->fifo_write_ptr - uart->fifo_read_ptr >= 16)
         uart->fifo_read_ptr++;
-    }
+    uart->fifo_buf[uart->fifo_write_ptr++ % 16] = val;
 }
 
 int64_t simple_uart_get_size(simple_uart_td *uart) {
     return uart->fifo_write_ptr - uart->fifo_read_ptr;
 }
 
+// reads stdin in raw mode and pushes bytes to the rx fifo
 void *simple_uart_rx_thread(void *ptr) {
     simple_uart_td *uart = (simple_uart_td *)ptr;
     unsigned char temp_buf;
@@ -49,8 +45,7 @@ void *simple_uart_rx_thread(void *ptr) {
         }
 
         pthread_mutex_lock(&fifo_lock);
-        if (uart)
-            simple_uart_rx_fifo_push(uart, temp_buf);
+        simple_uart_rx_fifo_push(uart, temp_buf);
         pthread_mutex_unlock(&fifo_lock);
     }
     return NULL;
@@ -63,7 +58,6 @@ void simple_uart_revert(void) {
 
 void simple_uart_init(simple_uart_td *uart) {
     pthread_t thread_id;
-    global_uart_ptr = uart;
     pthread_mutex_init(&fifo_lock, NULL);
     tcgetattr(0, &term_config);
     struct termios raw_config = term_config;
@@ -74,20 +68,16 @@ void simple_uart_init(simple_uart_td *uart) {
 }
 
 bool simple_uart_update(simple_uart_td *uart) {
-    // The interrupt fires whenever there is even a single RX character available.
-    if (simple_uart_get_size(uart) > 0) {
-        return true;
-    }
-    return false;
+    return simple_uart_get_size(uart) > 0;
 }
 
+// 0x00=rx_data 0x04=rx_avail 0x08=tx_data 0x0c=tx_busy
 bool simple_uart_bus_access_func(simple_uart_td *uart, uint32_t addr, bus_access access,
                                  uint32_t *val, uint8_t len) {
-    // 0 for rx data, 0x04 for rx_data_new, 0x08 for tx_data write, 0x0c for tx_busy
 
     if (access == bus_write) {
         switch (addr) {
-        case 0x08: // tx_data write
+        case 0x08:
             if (print_type)
                 printf("%d\n", (uint8_t)*val);
             else
@@ -95,10 +85,9 @@ bool simple_uart_bus_access_func(simple_uart_td *uart, uint32_t addr, bus_access
             fflush(stdout);
             break;
         default:
-            // Invalid write
             break;
         }
-    } else { // Read
+    } else {
         switch (addr) {
         case 0x00: // rx data
             pthread_mutex_lock(&fifo_lock);
@@ -108,11 +97,10 @@ bool simple_uart_bus_access_func(simple_uart_td *uart, uint32_t addr, bus_access
         case 0x04: // rx_data_new
             *val = (simple_uart_get_size(uart) > 0) ? 1 : 0;
             break;
-        case 0x0c:    // tx_busy
-            *val = 0; // Always ready
+        case 0x0c:
+            *val = 0; // never busy
             break;
         default:
-            // Invalid read
             break;
         }
     }

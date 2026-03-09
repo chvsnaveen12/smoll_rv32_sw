@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Naveen Chavali
 
-// Machine information registers
+// CSR addresses
 #define MVENDORID 0xf11
 #define MARCHID 0xf12
 #define MIMPID 0xf13

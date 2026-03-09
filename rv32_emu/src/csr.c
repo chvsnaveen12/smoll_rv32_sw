@@ -9,6 +9,8 @@ static inline uint32_t write_with_bitmask(uint32_t initial_val, uint32_t new_val
     return (initial_val & ~bitmask) | (new_val & bitmask);
 }
 
+// Returns false for unrecognized or privilege-inaccessible CSR addresses. Caller treats this as an
+// illegal instruction.
 bool csr_read(csr_td *csr, priv_level_td privilege, uint32_t addr, uint32_t *val) {
     if (privilege == priv_machine) {
         if (addr == MVENDORID || addr == MARCHID || addr == MIMPID || addr == MHARTID ||
@@ -96,6 +98,8 @@ bool csr_read(csr_td *csr, priv_level_td privilege, uint32_t addr, uint32_t *val
     return false;
 }
 
+// Returns false for unrecognized CSRs. Writes to read-only CSRs (misa, mvendorid, etc.) silently
+// succeed -- the RISC-V spec allows this.
 bool csr_write(csr_td *csr, priv_level_td privilege, uint32_t addr, uint32_t val) {
     if (privilege == priv_machine) {
         switch (addr) {

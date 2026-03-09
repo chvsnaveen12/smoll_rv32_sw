@@ -14,7 +14,7 @@ typedef enum priv_level {
     priv_machine = 3,
 } priv_level_td;
 
-typedef enum bus_access { bus_read = 0, bus_write = 1, bus_fetch = 2, MAX = 3 } bus_access;
+typedef enum bus_access { bus_read = 0, bus_write = 1, bus_fetch = 2 } bus_access;
 
 typedef enum trap_cause_interrupt {
     rsvd_0 = 0,
@@ -50,6 +50,7 @@ typedef enum trap_cause_exception {
     str_amo_page_fault
 } trap_cause_exception;
 
+// CSRs are a flat struct; reads/writes go through csr_read/csr_write for privilege checks.
 typedef struct csr {
     uint32_t mstatus;
     uint32_t medeleg;
@@ -73,6 +74,7 @@ typedef struct csr {
     uint32_t satp;
 } csr_td;
 
+// soc_ptr is a void* to avoid a circular include with soc_td.
 typedef struct core {
     // Core registers
     priv_level_td privilege;
@@ -118,43 +120,23 @@ typedef struct core {
 } core_td;
 
 typedef struct uart {
-    // 16550
-    uint8_t dll;
-    uint8_t dlm;
-    uint8_t lcr;
-    uint8_t mcr;
-    uint8_t scr;
-    uint8_t iir;
-    uint8_t ier;
-    uint8_t fcr;
-
-    // RX Fifo
+    // Simple circular FIFO for RX. Filled by the reader thread, drained by the emulator.
     uint8_t fifo_buf[16];
     int64_t fifo_read_ptr;
     int64_t fifo_write_ptr;
-
-    // Internal state for interrupts
-    uint8_t thre_int;
 } simple_uart_td;
 
 #define PLIC_PENDING_REGS 1
-#define PLIC_PRIO_REGS 32
 #define PLIC_ENABLE_REGS 1
 #define PLIC_CLAIMED_REGS 1
 
+// Priorities are fixed at 1 and thresholds fixed at 0, so neither needs storage.
 typedef struct plic {
     uint32_t pending[PLIC_PENDING_REGS];
-    uint32_t priority[PLIC_PRIO_REGS];
-
     uint32_t enable0[PLIC_ENABLE_REGS];
     uint32_t enable1[PLIC_ENABLE_REGS];
-
     uint32_t claim_complete0;
-    uint32_t threshold0;
-
     uint32_t claim_complete1;
-    uint32_t threshold1;
-
     // Internal
     uint32_t claimed[PLIC_CLAIMED_REGS];
 } plic_td;
@@ -166,53 +148,6 @@ typedef struct clint {
     uint64_t cycle;
 } clint_td;
 
-struct virtq_desc {
-    uint64_t addr;
-    uint32_t len;
-    uint16_t flags;
-    uint16_t next;
-} __attribute__((packed));
-
-struct virtq_avail {
-    uint16_t flags;
-    uint16_t idx;
-    uint16_t ring[1024];
-} __attribute__((packed));
-
-struct virtq_used_elem {
-    uint32_t id;
-    uint32_t len;
-} __attribute__((packed));
-
-struct virtq_used {
-    uint16_t flags;
-    uint16_t idx;
-    struct virtq_used_elem ring[1024];
-} __attribute__((packed));
-
-typedef struct blk {
-    uint32_t status;
-    uint32_t device_features_sel;
-    uint32_t queue_sel;
-    uint32_t queue_num;
-    uint32_t queue_ready;
-    uint32_t queue_notify;
-
-    uint32_t queue_desc_low;
-    uint32_t queue_avail_low;
-    uint32_t queue_used_low;
-
-    // Internal
-    struct virtq_desc *desc_ptr;
-    struct virtq_avail *avail_ptr;
-    struct virtq_used *used_ptr;
-
-    uint8_t *disk;
-    uint8_t *ram;
-
-    void *soc_ptr;
-} blk_td;
-
 typedef struct soc {
     core_td core;
     uint8_t *rom;
@@ -221,7 +156,6 @@ typedef struct soc {
     simple_uart_td uart;
     plic_td plic;
     clint_td clint;
-    blk_td blk;
 } soc_td;
 
 #endif

@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Naveen Chavali
+# This file was written by Claude Opus 4.5
+
 import sys
 import os
 import struct
